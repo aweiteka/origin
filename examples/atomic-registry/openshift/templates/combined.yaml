@@ -39,7 +39,7 @@ objects:
         containers:
         - image: aweiteka/origin-nonroot
           imagePullPolicy: Always
-          name: origin-master
+          name: master
           args:
             - start
             - master
@@ -50,7 +50,7 @@ objects:
             failureThreshold: 3
             httpGet:
               path: /healthz/ping
-              port: 8443
+              port: 443
               scheme: HTTPS
             initialDelaySeconds: 10
             periodSeconds: 10
@@ -60,13 +60,13 @@ objects:
             failureThreshold: 3
             httpGet:
               path: /healthz/ready
-              port: 8443
+              port: 443
               scheme: HTTPS
             periodSeconds: 10
             successThreshold: 1
             timeoutSeconds: 5
           ports:
-          - containerPort: 8443
+          - containerPort: 443
             protocol: TCP
           resources: {}
           terminationMessagePath: /dev/termination-log
@@ -87,7 +87,7 @@ objects:
             - name: KUBERNETES_SERVICE_HOST
               value: localhost
             - name: KUBERNETES_SERVICE_PORT
-              value: "8443"
+              value: "443"
           livenessProbe:
             failureThreshold: 3
             httpGet:
@@ -153,12 +153,12 @@ objects:
     name: atomic-registry
   spec:
     ports:
-    - name: 8443-tcp
-      port: 8443
+    - name: 443-tcp
+      port: 443
       protocol: TCP
-      targetPort: 8443
-    - name: 5000-tcp
-      port: 5000
+      targetPort: 443
+    - name: 80-tcp
+      port: 80
       protocol: TCP
       targetPort: 5000
     selector:

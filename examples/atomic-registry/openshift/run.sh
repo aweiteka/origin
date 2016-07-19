@@ -2,34 +2,43 @@
 
 MASTER_CONF=master-config
 REGISTRY_CONF=registry-config
+ROUTE=atomic-registry-aweiteka.e8ca.engint.openshiftapps.com
 
 function config {
+  mkdir -p ${MASTER_CONF}
+  mkdir -p ${REGISTRY_CONF}
   docker run \
   -it --rm \
   -u root \
   -v `pwd`/${MASTER_CONF}:/var/lib/openshift/openshift.local.config/master \
   aweiteka/origin-nonroot \
-  start master --master https://localhost:8443 --public-master https://localhost:8443 --write-config /var/lib/openshift/openshift.local.config/master
+  start master --master https://localhost:443 --public-master https://${ROUTE}:443 --write-config /var/lib/openshift/openshift.local.config/master
 
-cat `pwd`/${MASTER_CONF}/ca.crt > `pwd`/${REGISTRY_CONF}/service-ca.crt
-cat `pwd`/${MASTER_CONF}/service-signer.crt >> `pwd`/${REGISTRY_CONF}/service-ca.crt
+  cat `pwd`/${MASTER_CONF}/ca.crt > `pwd`/${REGISTRY_CONF}/service-ca.crt
+  cat `pwd`/${MASTER_CONF}/service-signer.crt >> `pwd`/${REGISTRY_CONF}/service-ca.crt
 
-#  chown -R 1001 `pwd`/${MASTER_CONF}
-#  chown -R 1001 `pwd`/${REGISTRY_CONF}
   oc create secret generic origin-config --from-file `pwd`/${MASTER_CONF}
   oc create secret generic registry-secret --from-file `pwd`/${REGISTRY_CONF}
 }
 
-function setup {
-  oadm registry
+function setup() {
+  POD=$1
+  CMD="oc exec -it ${POD} -c master"
+  ${CMD} oadm registry
 
   # pause for components to create
   sleep 3
   # we don't need the kubernetes components created during bootstrapping
-  oc delete dc,service docker-registry
-  # Get the service account token for registry to connect to master API
-  TOKEN_NAME=$(oc get sa registry --template '{{ $secret := index .secrets 0 }} {{ $secret.name }}')
-  oc get secret ${TOKEN_NAME} --template '{{ .data.token }}' | base64 -d > /etc/atomic-registry/serviceaccount/token
+  ${CMD} oc delete dc,service docker-registry
+}
+
+function manual {
+  POD=$(oc get pods -l app=atomic-registry --template '{{ $pod := index .items 0}} {{ $pod.metadata.name }}')
+  CMD="oc exec -it ${POD} -c master"
+  echo "Using pod ${CMD}"
+  #set -x
+  #${CMD} oc get sa registry --template '{{ $secret := index .secrets 0 }} {{ $secret.name }}'
+  #${CMD} oc get secret ${TOKEN_NAME} --template '{{ .data.token }}' | base64 -d
 }
 function origin {
   docker run \
@@ -60,8 +69,4 @@ function stop {
   docker rm origin registry
 }
 
-function hello {
-  echo "hello"
-}
-
-$1
+$1 $2
