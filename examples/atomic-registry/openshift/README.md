@@ -9,9 +9,10 @@ Run Atomic Registry as an OpenShift deployment.
 
 ## Deploy
 
-1. Create the configuration
+1. `git clone` this repo
+1. Create the configuration. The route hostname will be in the form of `atomic-registry-<openshift_project>.<openshift_route>`
 
-        ./run.sh config
+        ./run.sh config <openshift_route_hostname>
 1. Edit **master-config/master-config.yaml** to ensure all instances of bindAddress are using port 443
 
         bindAddress: 0.0.0.0:443

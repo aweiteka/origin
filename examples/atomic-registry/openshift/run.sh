@@ -2,7 +2,7 @@
 
 MASTER_CONF=master-config
 REGISTRY_CONF=registry-config
-ROUTE=atomic-registry-aweiteka.e8ca.engint.openshiftapps.com
+ROUTE=$2
 
 function config {
   mkdir -p ${MASTER_CONF}
@@ -69,4 +69,4 @@ function stop {
   docker rm origin registry
 }
 
-$1 $2
+$1
