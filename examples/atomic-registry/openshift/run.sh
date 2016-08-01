@@ -17,8 +17,8 @@ function config {
   cat `pwd`/${MASTER_CONF}/ca.crt > `pwd`/${REGISTRY_CONF}/service-ca.crt
   cat `pwd`/${MASTER_CONF}/service-signer.crt >> `pwd`/${REGISTRY_CONF}/service-ca.crt
 
-  oc create secret generic origin-config --from-file `pwd`/${MASTER_CONF}
-  oc create secret generic registry-secret --from-file `pwd`/${REGISTRY_CONF}
+  oc create secret generic master --from-file `pwd`/${MASTER_CONF}
+  oc create secret generic registry --from-file `pwd`/${REGISTRY_CONF}
 }
 
 function setup() {

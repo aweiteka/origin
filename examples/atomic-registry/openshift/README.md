@@ -10,22 +10,28 @@ Run Atomic Registry as an OpenShift deployment.
 ## Deploy
 
 1. `git clone` this repo
-1. Create the configuration. The route hostname will be in the form of `atomic-registry-<openshift_project>.<openshift_route>`
+1. Create routes for the services
+
+        oc create route passthrough --service master --port 443
+        oc create route passthrough --service registry --port 80
+        oc get routes
+1. Create the configuration using the master route from the previous step.
 
         ./run.sh config <openshift_route_hostname>
-1. Edit **master-config/master-config.yaml** to ensure all instances of bindAddress are using port 443
+1. Edit **master-config/master-config.yaml** to ensure all instances of bindAddress are using port 443, not 8443
 
         bindAddress: 0.0.0.0:443
-1. Deploy the registry
+1. Deploy the registry pods and services
 
-        oc new-app -f templates/combined.yaml
+        oc new-app -f templates/multi-pod.yaml \
+                   -p MASTER_ROUTE_URI=master-<openshift_project>.<openshift_route>
 1. Wait for all pods to start.
 
         oc get pods -w
 1. Run these setup commands inside the master container.
 
         oc get pods
-        oc exec -it <registry_pod> -c master bash
+        oc exec -it <registry_pod> bash
         oadm registry
         oc delete dc,service docker-registry
         TOKEN_NAME=$(oc get sa registry --template '{{ $secret := index .secrets 0 }} {{ $secret.name }}')
@@ -33,25 +39,15 @@ Run Atomic Registry as an OpenShift deployment.
         exit
 1. Copy the registry token and save to local file **registry-config/token**, then recreate registry secrets and re-deploy:
 
-        oc delete secret registry-secret
-        oc create secret generic registry-secret --from-file registry-config
-        oc deploy atomic-registry --latest
+        oc delete secret registry
+        oc create secret generic registry --from-file registry-config
+        oc deploy registry --latest
 
-1. Create a route
-
-        oc expose service atomic-registry
-1. Edit the route to add TLS passthrough mode, `oc edit route atomic-registry`, also removing **targetPort** section.
-
-        to:
-          kind: Service
-          name: atomic-registry
-        tls:
-          termination: passthrough
 1. The registry should be deployed at the route
 
-        oc describe route atomic-registry
+        oc describe route registry
 
-## Issues
+## Issues/TODO
 
 1. Need to generate oauth client on origin pod before cockpit is deployed
 1. cockpit-kubernetes console not working. Debug downward API with petervo
