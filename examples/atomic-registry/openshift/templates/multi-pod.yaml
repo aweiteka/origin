@@ -1,0 +1,232 @@
+apiVersion: v1
+kind: Template
+metadata:
+  creationTimestamp: null
+  name: atomic-registry-multipod
+objects:
+- kind: DeploymentConfig
+  apiVersion: v1
+  metadata:
+    annotations:
+    labels:
+      app: atomic-registry
+    name: master
+  spec:
+    replicas: 1
+    selector:
+      app: atomic-registry
+      deploymentconfig: master
+    strategy:
+      resources: {}
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        annotations:
+        labels:
+          app: atomic-registry
+          deploymentconfig: master
+      spec:
+        containers:
+        - image: aweiteka/origin-nonroot
+          imagePullPolicy: Always
+          name: master
+          args:
+            - start
+            - master
+            - --config=/var/lib/openshift/openshift.local.config/master/master-config.yaml
+            - --loglevel=5
+          env:
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz/ping
+              port: 443
+              scheme: HTTPS
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz/ready
+              port: 443
+              scheme: HTTPS
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          ports:
+          - containerPort: 443
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          volumeMounts:
+            - name: config
+              mountPath: /var/lib/openshift/openshift.local.config/master/
+            - name: etcd
+              mountPath: /var/lib/openshift/openshift.local.etcd
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - name: etcd
+          emptyDir: {}
+        - name: config
+          secret:
+            secretName: master
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+    triggers:
+    - type: ConfigChange
+  status: {}
+- kind: DeploymentConfig
+  apiVersion: v1
+  metadata:
+    annotations:
+      openshift.io/generated-by: OpenShiftNewApp
+    creationTimestamp: null
+    labels:
+      app: atomic-registry
+    name: registry
+  spec:
+    replicas: 1
+    selector:
+      app: atomic-registry
+      deploymentconfig: registry
+    strategy:
+      resources: {}
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        annotations:
+          openshift.io/generated-by: OpenShiftNewApp
+        creationTimestamp: null
+        labels:
+          app: atomic-registry
+          deploymentconfig: registry
+      spec:
+        containers:
+        - image: openshift/origin-docker-registry:latest
+          imagePullPolicy: Always
+          env:
+            - name: REGISTRY_HTTP_ADDR
+              value: ":5000"
+            - name: REGISTRY_HTTP_NET
+              value: tcp
+            - name: REGISTRY_HTTP_SECRET
+              value: ${REGISTRY_HTTP_SECRET}
+            - name: KUBERNETES_SERVICE_HOST
+              value: ${MASTER_ROUTE_URI}
+            - name: KUBERNETES_SERVICE_PORT
+              value: "443"
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: 5000
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: 5000
+              scheme: HTTP
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          name: registry
+          ports:
+          - containerPort: 5000
+            protocol: TCP
+          resources: {}
+          securityContext:
+            privileged: false
+          terminationMessagePath: /dev/termination-log
+          volumeMounts:
+          - name: local-storage
+            mountPath: /registry
+          - name: registry-secret
+            mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - name: local-storage
+          emptyDir: {}
+        - name: registry-secret
+          secret:
+            secretName: registry
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+    triggers:
+    - type: ConfigChange
+  status: {}
+- kind: Service
+  apiVersion: v1
+  metadata:
+    labels:
+      app: atomic-registry
+    name: master
+  spec:
+    ports:
+    - name: master
+      port: 443
+      protocol: TCP
+      targetPort: 443
+    selector:
+      name: master
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- kind: Service
+  apiVersion: v1
+  metadata:
+    labels:
+      app: atomic-registry
+    name: registry
+  spec:
+    ports:
+    - name: registry
+      port: 443
+      protocol: TCP
+      targetPort: 5000
+    selector:
+      name: registry
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+parameters:
+  - description: Registry HTTP secret
+    name: REGISTRY_HTTP_SECRET
+    from: "user[a-zA-Z0-9]{64}"
+    generate: expression
+  - description: Master route URI
+    name: MASTER_ROUTE_URI
+    required: true
+  - description: "Registry master log level (1-10) FIXME"
+    name: MASTER_LOG_LEVEL
+    default: "5"
