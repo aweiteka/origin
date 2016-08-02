@@ -16,6 +16,7 @@ objects:
     selector:
       app: atomic-registry
       deploymentconfig: master
+      name: master
     strategy:
       resources: {}
       rollingParams:
@@ -31,6 +32,7 @@ objects:
         labels:
           app: atomic-registry
           deploymentconfig: master
+          name: master
       spec:
         containers:
         - image: aweiteka/origin-nonroot
@@ -102,6 +104,7 @@ objects:
     selector:
       app: atomic-registry
       deploymentconfig: registry
+      name: registry
     strategy:
       resources: {}
       rollingParams:
@@ -119,6 +122,7 @@ objects:
         labels:
           app: atomic-registry
           deploymentconfig: registry
+          name: registry
       spec:
         containers:
         - image: openshift/origin-docker-registry:latest
@@ -131,7 +135,7 @@ objects:
             - name: REGISTRY_HTTP_SECRET
               value: ${REGISTRY_HTTP_SECRET}
             - name: KUBERNETES_SERVICE_HOST
-              value: ${MASTER_ROUTE_URI}
+              value: master
             - name: KUBERNETES_SERVICE_PORT
               value: "443"
           livenessProbe:
@@ -210,7 +214,7 @@ objects:
   spec:
     ports:
     - name: registry
-      port: 443
+      port: 5000
       protocol: TCP
       targetPort: 5000
     selector:
@@ -224,9 +228,6 @@ parameters:
     name: REGISTRY_HTTP_SECRET
     from: "user[a-zA-Z0-9]{64}"
     generate: expression
-  - description: Master route URI
-    name: MASTER_ROUTE_URI
-    required: true
   - description: "Registry master log level (1-10) FIXME"
     name: MASTER_LOG_LEVEL
     default: "5"

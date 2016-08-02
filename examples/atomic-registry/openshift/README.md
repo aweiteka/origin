@@ -17,29 +17,30 @@ Run Atomic Registry as an OpenShift deployment.
         oc get routes
 1. Create the configuration using the master route from the previous step.
 
-        ./run.sh config <openshift_route_hostname>
+        sudo ./run.sh config <openshift_route_hostname>
 1. Edit **master-config/master-config.yaml** to ensure all instances of bindAddress are using port 443, not 8443
 
         bindAddress: 0.0.0.0:443
+1. Create master secrets
+
+        oc create secret generic master --from-file master-config
 1. Deploy the registry pods and services
 
-        oc new-app -f templates/multi-pod.yaml \
-                   -p MASTER_ROUTE_URI=master-<openshift_project>.<openshift_route>
+        oc new-app -f templates/multi-pod.yaml
 1. Wait for all pods to start.
 
         oc get pods -w
 1. Run these setup commands inside the master container.
 
         oc get pods
-        oc exec -it <registry_pod> bash
+        oc exec -it <master_pod> bash
         oadm registry
-        oc delete dc,service docker-registry
+        oc delete service docker-registry
         TOKEN_NAME=$(oc get sa registry --template '{{ $secret := index .secrets 0 }} {{ $secret.name }}')
         oc get secret ${TOKEN_NAME} --template '{{ .data.token }}' | base64 -d
         exit
 1. Copy the registry token and save to local file **registry-config/token**, then recreate registry secrets and re-deploy:
 
-        oc delete secret registry
         oc create secret generic registry --from-file registry-config
         oc deploy registry --latest
 

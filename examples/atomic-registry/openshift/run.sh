@@ -29,7 +29,7 @@ function setup() {
   # pause for components to create
   sleep 3
   # we don't need the kubernetes components created during bootstrapping
-  ${CMD} oc delete dc,service docker-registry
+  ${CMD} oc delete service docker-registry
 }
 
 function manual {
