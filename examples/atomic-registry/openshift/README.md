@@ -35,7 +35,7 @@ Run Atomic Registry as an OpenShift deployment.
         oc get pods
         oc exec -it <master_pod> bash
         oadm registry
-        oc delete service docker-registry
+        oc delete dc docker-registry
         TOKEN_NAME=$(oc get sa registry --template '{{ $secret := index .secrets 0 }} {{ $secret.name }}')
         oc get secret ${TOKEN_NAME} --template '{{ .data.token }}' | base64 -d
         exit

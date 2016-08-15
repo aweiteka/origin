@@ -14,11 +14,12 @@ function config {
   aweiteka/origin-nonroot \
   start master --master https://localhost:443 --public-master https://${ROUTE}:443 --write-config /var/lib/openshift/openshift.local.config/master
 
+  cp `pwd`/${MASTER_CONF}/ca.crt `pwd`/${REGISTRY_CONF}/
   cat `pwd`/${MASTER_CONF}/ca.crt > `pwd`/${REGISTRY_CONF}/service-ca.crt
   cat `pwd`/${MASTER_CONF}/service-signer.crt >> `pwd`/${REGISTRY_CONF}/service-ca.crt
 
-  oc create secret generic master --from-file `pwd`/${MASTER_CONF}
-  oc create secret generic registry --from-file `pwd`/${REGISTRY_CONF}
+  #oc create secret generic master --from-file `pwd`/${MASTER_CONF}
+  #oc create secret generic registry --from-file `pwd`/${REGISTRY_CONF}
 }
 
 function setup() {

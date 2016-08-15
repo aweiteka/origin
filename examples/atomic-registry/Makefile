@@ -6,6 +6,9 @@ all: build install test
 build:
 	docker build -t atomic-registry-quickstart .
 
+build-openshift:
+	docker build -t aweiteka/origin-nonroot openshift/.
+
 install:
 	sudo yum install -y atomic
 	sudo atomic install $(TEST_IMAGE) $(INSTALLHOST)
