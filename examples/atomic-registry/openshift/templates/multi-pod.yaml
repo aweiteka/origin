@@ -10,12 +10,11 @@ objects:
     annotations:
     labels:
       app: atomic-registry
+      name: master
     name: master
   spec:
     replicas: 1
     selector:
-      app: atomic-registry
-      deploymentconfig: master
       name: master
     strategy:
       resources: {}
@@ -31,7 +30,6 @@ objects:
         annotations:
         labels:
           app: atomic-registry
-          deploymentconfig: master
           name: master
       spec:
         containers:
@@ -98,12 +96,11 @@ objects:
     creationTimestamp: null
     labels:
       app: atomic-registry
+      name: registry
     name: registry
   spec:
     replicas: 1
     selector:
-      app: atomic-registry
-      deploymentconfig: registry
       name: registry
     strategy:
       resources: {}
@@ -121,7 +118,6 @@ objects:
         creationTimestamp: null
         labels:
           app: atomic-registry
-          deploymentconfig: registry
           name: registry
       spec:
         containers:
@@ -135,9 +131,11 @@ objects:
             - name: REGISTRY_HTTP_SECRET
               value: ${REGISTRY_HTTP_SECRET}
             - name: KUBERNETES_SERVICE_HOST
-              value: master
+              value: ${API_MASTER_URI}
             - name: KUBERNETES_SERVICE_PORT
               value: "443"
+            - name: REGISTRY_AUTH_OPENSHIFT_TOKENREALM
+              value: https://${API_MASTER_URI}
           livenessProbe:
             failureThreshold: 3
             httpGet:
@@ -231,3 +229,6 @@ parameters:
   - description: "Registry master log level (1-10) FIXME"
     name: MASTER_LOG_LEVEL
     default: "5"
+  - description: API master route URI, e.g. registry-project.example.com
+    name: API_MASTER_URI
+    required: true

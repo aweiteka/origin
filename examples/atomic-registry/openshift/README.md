@@ -12,21 +12,20 @@ Run Atomic Registry as an OpenShift deployment.
 1. `git clone` this repo
 1. Create routes for the services
 
-        oc create route passthrough --service master --port 443
-        oc create route passthrough --service registry --port 80
-        oc get routes
+        oc create route passthrough --service master --port master
+        oc create route passthrough --service registry --port registry
 1. Create the configuration using the master route from the previous step.
 
-        sudo ./run.sh config <openshift_route_hostname>
-1. Edit **master-config/master-config.yaml** to ensure all instances of bindAddress are using port 443, not 8443
-
-        bindAddress: 0.0.0.0:443
+        sudo ./run.sh config $(oc get route master --template='{{ .spec.host }}')
 1. Create master secrets
 
         oc create secret generic master --from-file master-config
 1. Deploy the registry pods and services
 
-        oc new-app -f templates/multi-pod.yaml
+        oc new-app -f templates/multi-pod.yaml -p API_MASTER_URI=$(oc get route master --template='{{ .spec.host }}')
+#1. Create environment variable
+#
+#        oc env dc/registry #REGISTRY_AUTH_OPENSHIFT_TOKENREALM=http://registry-aweiteka.e8ca.engint.openshiftapps.com
 1. Wait for all pods to start.
 
         oc get pods -w
@@ -43,17 +42,24 @@ Run Atomic Registry as an OpenShift deployment.
 
         oc create secret generic registry --from-file registry-config
         oc deploy registry --latest
+1. Remove TLS mode from route. `oc edit route registry`, then remove the following:
 
+        tls:
+          termination: passthrough
 1. The registry should be deployed at the route
 
         oc describe route registry
+1. Login with docker
+
+        sudo docker login -p TOKEN -u unused -e unused MASTERAPI:80
 
 ## Issues/TODO
 
 1. Need to generate oauth client on origin pod before cockpit is deployed
 1. cockpit-kubernetes console not working. Debug downward API with petervo
-1.Registry certs to establish cxn to origin-master
+1. Registry certs to establish cxn to origin-master
   * ENV vars
+
         "OPENSHIFT_MASTER":    config.Host,
         "OPENSHIFT_CA_DATA":   string(config.CAData),
         "OPENSHIFT_KEY_DATA":  string(config.KeyData),
